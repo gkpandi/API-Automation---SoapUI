@@ -1,0 +1,249 @@
+import jxl.*
+import groovy.util.*
+import groovy.lang.*
+import java.io.File
+import java.util.Date
+import java.lang.String
+import java.util.Calendar
+import java.io.FileWriter
+import java.io.InputStream
+import java.util.LinkedHashMap
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.concurrent.TimeUnit
+import com.eviware.soapui.model.testsuite.*
+
+import org.apache.poi.ss.usermodel.*
+import org.apache.poi.hssf.util.HSSFColor
+import org.apache.poi.hssf.usermodel.HSSFRow
+import org.apache.poi.hssf.usermodel.HSSFFont
+import org.apache.poi.hssf.usermodel.HSSFCell
+import org.apache.poi.hssf.usermodel.HSSFSheet
+import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.hssf.usermodel.HSSFWorkbook
+import org.apache.poi.hssf.usermodel.HSSFCellStyle
+import org.apache.poi.ss.usermodel.FillPatternType
+
+// Read datasheet
+readMainSheet()
+
+// Clear Properties
+resetProperties()
+
+// This method will initiate the execution by reading the datasheet i.e.MainSheet
+public void readMainSheet()
+{
+	def filePath = "D:\\working\\Groups\\RunManager.xls"
+
+	String startTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	log.info ("Execution Started On :" + startTime);
+
+	// Create a output folder
+	String folderPath = createFolder()
+	testRunner.testCase.testSuite.project.setPropertyValue("MAIN_FLDR",folderPath)
+	
+	Workbook book = Workbook.getWorkbook(new File(filePath))
+	Sheet sheet = book.getSheet(0) // "MainSheet"
+	def projName = testRunner.testCase.testSuite.project
+	
+	int totalRows = sheet.getRows()
+	int totalCols = sheet.getColumns()
+
+	// Read "MainSheet" rows which has "Y" flag enabled
+	log.info "Reading MainSheet....."
+	for(int baseRow = 1; baseRow < totalRows; baseRow++)
+	{
+		if (sheet.getCell(1,baseRow).getContents().equalsIgnoreCase("Y"))
+		{
+			def colsList = []
+
+			//  Collect the column values row by row
+			for (int baseCol=0; baseCol < totalCols; baseCol++)
+			{
+				colsList.add(sheet.getCell(baseCol,baseRow).getContents())
+			}
+			// Store the column values into the custom properties
+			testRunner.testCase.testSuite.project.setPropertyValue("SUITE_NAME",colsList[0])
+			testRunner.testCase.testSuite.project.setPropertyValue("SUITE_RESULT",colsList[2])
+			testRunner.testCase.testSuite.project.setPropertyValue("TIME_TAKEN",colsList[3])
+			
+			String sheetName = testRunner.testCase.testSuite.project.getPropertyValue("SUITE_NAME")
+			if (sheetName.equals("OADR1"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR1_TestCase'].testSteps['OADR1_StartupScript'])
+			}
+			else if (sheetName.equals("OADR2"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR2_TestCase'].testSteps['OADR2_StartupScript'])				
+			}
+			else if (sheetName.equals("OADR3"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR3_TestCase'].testSteps['OADR3_StartupScript'])
+			}
+			else if (sheetName.equals("OADR4"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR4_TestCase'].testSteps['OADR4_StartupScript'])
+			}
+			else if (sheetName.equals("OADR5"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR5_TestCase'].testSteps['OADR5_StartupScript'])
+			}
+			else if (sheetName.equals("OADR6"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR6_TestCase'].testSteps['OADR6_StartupScript'])
+			}
+			else if (sheetName.equals("OADR7"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['OADR7_TestCase'].testSteps['OADR7_StartupScript'])
+			}
+			else if (sheetName.equals("AddGroup_01"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps['AddGroup1_Script'])
+			}
+			else if (sheetName.equals("AddGroup_02"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_02'].testSteps['AddGroup2_Script'])
+			}
+			else if (sheetName.equals("AddGroup_03"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_03'].testSteps['AddGroup3_Script'])
+			}
+			else if (sheetName.equals("AddGroup_04"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_04'].testSteps['AddGroup4_Script'])
+			}
+			else if (sheetName.equals("AddGroup_05"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_05'].testSteps['AddGroup5_Script'])
+			}
+			else if (sheetName.equals("AddGroup_06"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_06'].testSteps['AddGroup6_Script'])
+			}
+			else if (sheetName.equals("AddGroup_07"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_07'].testSteps['AddGroup7_Script'])
+			}
+			else if (sheetName.equals("AddGroup_08"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Group_SubGroup_TC_08'].testSteps['AddGroup8_Script'])
+			}
+			else if (sheetName.equals("Change_Intera1"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_01'].testSteps['ChangeIntera1_Script'])
+			}
+			else if (sheetName.equals("Change_Intera2"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_02'].testSteps['ChangeIntera2_Script'])
+			}
+			else if (sheetName.equals("Change_Intera3"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_03'].testSteps['ChangeIntera3_Script'])
+			}
+			else if (sheetName.equals("Change_Intera4"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_04'].testSteps['ChangeIntera4_Script'])
+			}
+			else if (sheetName.equals("Change_Intera5"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_05'].testSteps['ChangeIntera5_Script'])
+			}
+			else if (sheetName.equals("Change_Intera6"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_06'].testSteps['ChangeIntera6_Script'])
+			}
+			else if (sheetName.equals("Change_Intera7"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intera_TC_07'].testSteps['ChangeIntera7_Script'])
+			}
+			else if (sheetName.equals("Change_Intra1"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_01'].testSteps['ChangeIntra1_Script'])
+			}
+			else if (sheetName.equals("Change_Intra2"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_02'].testSteps['ChangeIntra2_Script'])
+			}
+			else if (sheetName.equals("Change_Intra3"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_03'].testSteps['ChangeIntra3_Script'])
+			}
+			else if (sheetName.equals("Change_Intra4"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_04'].testSteps['ChangeIntra4_Script'])
+			}
+			else if (sheetName.equals("Change_Intra5"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_05'].testSteps['ChangeIntra5_Script'])
+			}
+			else if (sheetName.equals("Change_Intra6"))
+			{
+				testRunner.testCase.testSuite.project.setPropertyValue("BASE_ROW",baseRow.toString())
+				testRunner.runTestStep(projName.testSuites[sheetName].testCases['Change_Intra_TC_06'].testSteps['ChangeIntra6_Script'])
+			}			
+		}
+	}
+	String endTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	log.info ("Execution Finished On :" + endTime);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Method that returns the folder location that was newly created
+public String createFolder()
+{
+	String outputFolderLoc = "";
+	try{
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+		Date date = new Date();
+		String currentDateTime = dateFormat.format(date);
+		outputFolderLoc = "D:\\working\\Groups\\Output\\LastRunOn_" + currentDateTime;
+		File file = new File(outputFolderLoc);
+		
+		if (!file.exists()){
+			boolean isDirCreated = file.mkdir();
+		}
+	}
+	catch(Exception ex){
+		ex.printStackTrace();
+	}
+	return outputFolderLoc;
+}
+
+// Reset the properties
+public void resetProperties()
+{	
+	testRunner.testCase.testSuite.project.getPropertyNames().each{ propName -> 
+		if ( (!propName.equals('OracleDBPwd')) && (!propName.equals('OracleDBConn')) && (!propName.equals('endPointURL')) && (!propName.equals('ciamWSEndPoint')) )
+		{
+			testRunner.testCase.testSuite.project.setPropertyValue(propName,"")
+		}
+	}
+	log.info("Properties are reset successfully.")
+}

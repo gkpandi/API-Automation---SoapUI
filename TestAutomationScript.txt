@@ -1,0 +1,662 @@
+import jxl.*
+import groovy.util.*
+import groovy.lang.*
+import java.io.File
+import java.util.Date
+import java.lang.String
+import java.util.Calendar
+import java.io.FileWriter
+import java.io.InputStream
+import java.util.LinkedHashMap
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.concurrent.TimeUnit
+import com.eviware.soapui.model.testsuite.*
+
+import org.apache.poi.ss.usermodel.*
+import org.apache.poi.hssf.util.HSSFColor
+import org.apache.poi.hssf.usermodel.HSSFRow
+import org.apache.poi.hssf.usermodel.HSSFFont
+import org.apache.poi.hssf.usermodel.HSSFCell
+import org.apache.poi.hssf.usermodel.HSSFSheet
+import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.hssf.usermodel.HSSFWorkbook
+import org.apache.poi.hssf.usermodel.HSSFCellStyle
+import org.apache.poi.ss.usermodel.FillPatternType
+
+// Invoke runASuite() Method
+runASuite()
+
+public void runASuite()
+{	
+	def filePath = "D:\\working\\Groups\\RunManager.xls"
+	def projectName = testRunner.testCase.testSuite.project
+	String folderPath = testRunner.testCase.testSuite.project.getPropertyValue("MAIN_FLDR")
+	String sheetName = testRunner.testCase.testSuite.project.getPropertyValue("SUITE_NAME")
+	String suiteStartTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	log.info (sheetName + " is testsuite running..." + "\n")
+	
+	// Navigate to the respective TestSuite -> TestCase sheet
+	Workbook myBook = Workbook.getWorkbook(new File(filePath))
+	Sheet tcSheet = myBook.getSheet(sheetName)
+	int rows = tcSheet.getRows()
+	int cols = tcSheet.getColumns()
+
+	// This loop iterates fetch the rows which testcases are marked as "Y"
+	for (int row = 1; row < rows; row++)
+	{
+		if (tcSheet.getCell(1,row).getContents().equalsIgnoreCase("Y"))
+		{
+			def columnList = []
+			def resultList = []
+
+			for (int col = 0; col < cols; col++)
+			{
+				columnList.add(tcSheet.getCell(col,row).getContents())
+			}
+
+			testRunner.testCase.testSuite.project.setPropertyValue("TC_ID", columnList[0])
+			testRunner.testCase.testSuite.project.setPropertyValue("FLAG", columnList[1])
+			testRunner.testCase.testSuite.project.setPropertyValue("RESULT", columnList[2])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_1", columnList[3])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_2", columnList[4])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_3", columnList[5])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_4", columnList[6])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_5", columnList[7])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_6", columnList[8])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_7", columnList[9])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_8", columnList[10])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_9", columnList[11])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_10", columnList[12])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_11", columnList[13])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_12", columnList[14])
+			testRunner.testCase.testSuite.project.setPropertyValue("STEP_NAME_13", columnList[15])
+			////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////			
+			def request_1 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_1")
+			def request_2 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_2")
+			def request_3 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_3")
+			def request_4 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_4")
+
+			// GetObjectId Request
+			def runner = null
+			def tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+			def tstp = tc.getTestStepByName(request_1)
+			runner = tstp.run(testRunner,context)
+			sleep(1500)
+			def responseHolder = runner.getResponseContent()
+			runner = null
+			
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_1 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_1 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_1 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			
+			def resultXml = new XmlSlurper().parseText( responseHolder )
+			List objIds = null
+			List relObjIds = null
+			String query = ""
+			def relObjectId = ""
+			List companyName1 = null
+   			List companyName2 = null
+   			String strCompanyName1 = ""
+   			String strCompanyName2 = ""
+			if (resultXml != null)
+			{
+				// Collect random object IDs from CustRel table
+				objIds = resultXml?.ResultSet?.Row?.collect{it.OBJ_ID}
+    				companyName1 = resultXml?.ResultSet?.Row?.collect{it.NAME_DESC}
+				strCompanyName1 = companyName1[0]
+				if (objIds.size() > 0)
+				{
+					for (int idx = 0; idx < objIds.size(); idx++)
+					{
+						log.info ("Object ID: " + objIds[idx])
+						
+						query = "SELECT REL_OBJ_ID FROM CVM_UPD_APP.CUST_REL WHERE OBJ_ID IN ('" + objIds[idx] + "')"
+						testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+						log.info(query)
+						
+						tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+						tstp = tc.getTestStepByName(request_2)
+						runner = tstp.run(testRunner,context)
+						sleep(1500)
+						responseHolder = runner.getResponseContent()
+						runner = null
+						
+						resultXml = new XmlSlurper().parseText( responseHolder )
+						relObjIds = resultXml?.ResultSet?.Row?.collect{it.REL_OBJ_ID}
+						relObjectId = relObjIds[0]
+						testRunner.testCase.testSuite.project.setPropertyValue("RELOBJ_ID",relObjectId.toString())
+
+						// Verify Company Request
+						query = "SELECT NAME_DESC FROM CVM_UPD_APP.CUST_COMPANY_NAME WHERE OBJ_ID ='" + relObjectId + "'"
+						testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+						log.info(query)
+						
+						tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+						tstp = tc.getTestStepByName('Verify Company Request')
+						runner = tstp.run(testRunner,context)
+						sleep(1500)
+						responseHolder = runner.getResponseContent()
+						runner = null
+						
+						resultXml = new XmlSlurper().parseText( responseHolder )
+						companyName2 = resultXml?.ResultSet?.Row?.collect{it.NAME_DESC}
+						strCompanyName2 = companyName2[0]
+						log.info ("Object Id - Company :" + strCompanyName1 + "   RelObjectId - Company :" + strCompanyName2)
+						
+						if (!strCompanyName1.equals(strCompanyName2))
+						{
+							testRunner.cancel("Testcase Terminated")
+							log.info("Testcase Terminated.")
+							return null
+						}
+						
+						// Invoke Delink process
+						delinkProcess(sheetName,"Group_SubGroup_TC_01",request_3,request_4,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"),relObjectId)
+						resultList.add(testRunner.testCase.testSuite.project.getPropertyValue("JDBCREQ_RESULT"))
+						resultList.add(testRunner.testCase.testSuite.project.getPropertyValue("DLNKREQ_RESULT"))					
+					}
+				}
+			}
+			
+			// GetAddress Request
+			def request_5 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_5")
+			query = "SELECT ADDR_LINE_1_DESC,CITY_NM,STATE_PROVINCE_NM,	PSTL_CD,CNTRY_CD FROM CVM_UPD_APP.CUST_ADDRESS WHERE OBJ_ID IN('" + relObjectId + "') AND TYPE_CD = 'PRI'"
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			log.info(query)
+			
+			tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+			tstp = tc.getTestStepByName(request_5)
+			runner = tstp.run(testRunner,context)			
+			responseHolder = runner.getResponseContent()
+			runner = null
+			sleep(1500)
+			
+			resultXml = new XmlSlurper().parseText( responseHolder )
+			List addressLine1 = resultXml?.ResultSet?.Row?.collect{it.ADDR_LINE_1_DESC}
+			List cityName = resultXml?.ResultSet?.Row?.collect{it.CITY_NM}
+			List stateProvince = resultXml?.ResultSet?.Row?.collect{it.STATE_PROVINCE_NM}
+			List postalCode = resultXml?.ResultSet?.Row?.collect{it.PSTL_CD}
+			List countryCode = resultXml?.ResultSet?.Row?.collect{it.CNTRY_CD}
+			
+			testRunner.testCase.testSuite.project.setPropertyValue("ADDRESS_LINE1",addressLine1[0].toString())
+			testRunner.testCase.testSuite.project.setPropertyValue("CITY_NAME",cityName[0].toString())
+			testRunner.testCase.testSuite.project.setPropertyValue("STATE_CODE",stateProvince[0].toString())
+			testRunner.testCase.testSuite.project.setPropertyValue("POSTAL_CODE",postalCode[0].toString())
+			testRunner.testCase.testSuite.project.setPropertyValue("COUNTRY_CD",countryCode[0].toString())
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_5 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_5 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_5 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+
+			// Get CompanyName Request
+			def request_6 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_6")
+			query = "SELECT NAME_DESC FROM CVM_UPD_APP.CUST_COMPANY_NAME WHERE OBJ_ID IN('" + relObjectId + "')"
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			log.info(query)
+			tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+			tstp = tc.getTestStepByName(request_6)
+			runner = tstp.run(testRunner,context)			
+			responseHolder = runner.getResponseContent()
+			runner = null
+			sleep(1500)
+			
+			resultXml = new XmlSlurper().parseText( responseHolder )
+			List companyName = resultXml?.ResultSet?.Row?.collect{it.NAME_DESC}
+			testRunner.testCase.testSuite.project.setPropertyValue("COMPANY_NAME",companyName[0].toString())
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_6 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_6 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_6 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+
+			// GetPhoneNo Request
+			def request_7 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_7")
+			query = "SELECT SUBSTR(TEL_NBR,1,3) AS TEL_AREA_CD, SUBSTR(TEL_NBR,4,7) AS TEL_NBR FROM CVM_UPD_APP.CUST_PHONE WHERE OBJ_ID IN('" + relObjectId + "')"
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			log.info(query)
+			tc = projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01']
+			tstp = tc.getTestStepByName(request_7)
+			runner = tstp.run(testRunner,context)			
+			responseHolder = runner.getResponseContent()
+			runner = null
+			sleep(1500)
+			
+			resultXml = new XmlSlurper().parseText( responseHolder )
+			List areaCode = resultXml?.ResultSet?.Row?.collect{it.TEL_AREA_CD}
+			List telNumber = resultXml?.ResultSet?.Row?.collect{it.TEL_NBR}
+			testRunner.testCase.testSuite.project.setPropertyValue("AREA_CODE",areaCode[0].toString())
+			testRunner.testCase.testSuite.project.setPropertyValue("TEL_NUMBER",telNumber[0].toString())
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_7 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_7 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_7 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			
+			// UpsertGE Request
+			def request_8 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_8")
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_8])
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_8 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_8 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_8 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			sleep(1500)
+			String GEID = testRunner.testCase.testSuite.project.getPropertyValue("GE_ID")
+			
+			// Link GOGE Request
+			def request_9 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_9")
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_9])
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_9 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_9 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_9 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			sleep(1500)
+			
+			// Insert Country Request
+			def request_10 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_10")
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_10])
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_10 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_10 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_10 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			sleep(1500)
+			
+			// Jdbc1 Request
+			query = "SELECT *FROM CVM_UPD_APP.CESE_CUST_HIER_SUMMARY WHERE GLOBL_ENTI_NBR in ('" + GEID + "')"
+			log.info(query)
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps['JDBC1 Request'])
+			sleep(1500)
+			
+			// Insert Group Request
+			def request_11 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_11")
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_11])
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_11 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_11 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_11 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			sleep(1500)
+
+			// Jdbc2 Request
+			query = "SELECT *FROM CVM_UPD_APP.CESE_CUST_HIER_SUMMARY WHERE GLOBL_ENTI_NBR in ('" + GEID + "')"
+			log.info(query)
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps['JDBC2 Request'])
+			sleep(1500)
+			
+			// Enterprise Add Request
+			def request_12 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_12")
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_12])
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_12 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_12 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_12 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			sleep(2000)
+			
+			// Verify Request
+			def request_13 = testRunner.testCase.testSuite.project.getPropertyValue("STEP_NAME_13")
+			String accNo = testRunner.testCase.testSuite.project.getPropertyValue("ACCOUNT_NO")
+			query = "SELECT *FROM CVM_UPD_APP.CESE_CUST_HIER_SUMMARY WHERE CUST_ACCT_NBR in('" + accNo + "')"
+			testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+			log.info(query)
+			testRunner.runTestStep(projectName.testSuites[sheetName].testCases['Group_SubGroup_TC_01'].testSteps[request_13])
+			sleep(1000)
+			writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(request_13 + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(request_13 + "_Response"),testRunner.testCase.testSuite.project.getPropertyValue("TC_ID") + '_' + request_13 + '.txt',folderPath,testRunner.testCase.testSuite.project.getPropertyValue("TC_ID"))					
+			resultList.add(context.testCase.getPropertyValue("RESPONSE_STATUS"))
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+			String tSuiteName = sheetName
+			String tcId = testRunner.testCase.testSuite.project.getPropertyValue("TC_ID")
+
+			// Get consolidated result of all Requests and store it into the LinkedHashMap
+			LinkedHashMap<String,String> suitesInfo = new LinkedHashMap<String,String>();
+			suitesInfo.put("SUITE_NAME",tSuiteName)
+			suitesInfo.put("TC_ID",tcId)
+			suitesInfo.put(request_1,context.testCase.getPropertyValue(request_1 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_2,context.testCase.getPropertyValue(request_2 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_3,context.testCase.getPropertyValue(request_3 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_4,context.testCase.getPropertyValue(request_4 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_5,context.testCase.getPropertyValue(request_5 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_6,context.testCase.getPropertyValue(request_6 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_7,context.testCase.getPropertyValue(request_7 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_8,context.testCase.getPropertyValue(request_8 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_9,context.testCase.getPropertyValue(request_9 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_10,context.testCase.getPropertyValue(request_10 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_11,context.testCase.getPropertyValue(request_11 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_12,context.testCase.getPropertyValue(request_12 + "_RESPONSE_STATUS"))
+			suitesInfo.put(request_13,context.testCase.getPropertyValue(request_13 + "_RESPONSE_STATUS"))
+			// Call this method to update the each test step status against the testcase and testsuite i.e. TestCaseSummary sheet
+			writeExcel(tSuiteName,tcId,suitesInfo)
+			//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+			// Update the result in the excel sheet against the TestCase ID
+			FileInputStream fis = new FileInputStream(new File(filePath))
+			HSSFWorkbook wBook = new HSSFWorkbook(fis)
+			HSSFSheet hSheet = wBook.getSheet(sheetName)
+			org.apache.poi.ss.usermodel.Cell resultCell = null;
+	
+			// Check if 'resultList' list all PASS or not
+			def resCount = 0
+			for (int x=0; x < resultList.size(); x++)
+			{
+				if (resultList[x].equalsIgnoreCase("PASS"))
+				{
+					resCount++;
+				}
+			}
+
+			// If 'resultList.size' and 'resCount' are equal, 
+			// update testcase status as PASS
+			// Else update it as FAIL
+			if (resultList.size() == resCount)
+			{
+				// Set the cell values Request and Response
+				resultCell = hSheet.getRow(row).getCell(2)
+				resultCell.setCellValue("PASS")
+
+				// Highlight the status cell - Background
+				HSSFCellStyle style = wBook.createCellStyle()
+				style.setFillForegroundColor(IndexedColors.GREEN.getIndex())
+				style.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND)
+
+    				// Foreground
+				HSSFFont font = wBook.createFont()
+    				font.setColor(HSSFColor.WHITE.index)
+    				style.setFont(font)
+    						
+				// Apply border for the cells
+    				style.setBorderBottom(HSSFCellStyle.BORDER_THIN)
+				style.setBorderTop(HSSFCellStyle.BORDER_THIN)
+				style.setBorderRight(HSSFCellStyle.BORDER_THIN)
+				style.setBorderLeft(HSSFCellStyle.BORDER_THIN)
+    				resultCell.setCellStyle(style)
+
+				// Assign the corresponding TestSuite status as 'FAIL'
+				testRunner.testCase.testSuite.project.setPropertyValue("SUITE_RESULT", "PASS")
+			}
+			else
+			{
+				// Set the cell values Request and Response
+				resultCell = hSheet.getRow(row).getCell(2)
+				resultCell.setCellValue("FAIL")
+
+				// Highlight the status cell - Background
+				HSSFCellStyle style = wBook.createCellStyle()
+				style.setFillForegroundColor(IndexedColors.RED.getIndex())
+				style.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND)
+
+    				// Foreground
+				HSSFFont font = wBook.createFont()
+    				font.setColor(HSSFColor.WHITE.index)
+    				style.setFont(font)
+
+    				// Apply border for the cells
+    				style.setBorderBottom(HSSFCellStyle.BORDER_THIN)
+				style.setBorderTop(HSSFCellStyle.BORDER_THIN)
+				style.setBorderRight(HSSFCellStyle.BORDER_THIN)
+				style.setBorderLeft(HSSFCellStyle.BORDER_THIN)
+
+    				resultCell.setCellStyle(style)
+    						
+				// Assign the corresponding TestSuite status as 'FAIL'
+				testRunner.testCase.testSuite.project.setPropertyValue("SUITE_RESULT", "FAIL")
+			}
+
+			// Update the excel file with the Testcase Status (Pass/Fail)
+			FileOutputStream fout = new FileOutputStream(new File(filePath))
+			wBook.write(fout)
+			fout.close()
+			fis.close()
+		}
+	}
+	
+	String strSuiteResult = testRunner.testCase.testSuite.project.getPropertyValue("SUITE_RESULT")
+
+	// Open the TestSuite status in the MainSheet
+	FileInputStream fis1 = new FileInputStream(new File(filePath))
+	HSSFWorkbook pWbook = new HSSFWorkbook(fis1)
+	HSSFSheet pSheet = pWbook.getSheetAt(0) // MainSheet
+	org.apache.poi.ss.usermodel.Cell suiteResultCell = null;
+	org.apache.poi.ss.usermodel.Cell suiteTimeCell = null;
+
+	// Appropriate TestSuite row
+	def rowNum = testRunner.testCase.testSuite.project.getPropertyValue("BASE_ROW")
+	int baseRow = rowNum.toInteger()
+	
+	// Set the status of TestSuite in the appropriate cell
+	suiteResultCell = pSheet.getRow(baseRow).getCell(2)
+	suiteResultCell.setCellValue(strSuiteResult)
+
+	if (strSuiteResult.equalsIgnoreCase("PASS"))
+	{
+		// Highlight the status cell - Background
+		HSSFCellStyle style = pWbook.createCellStyle();
+		style.setFillForegroundColor(IndexedColors.GREEN.getIndex())
+		style.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND)
+
+    		// Foreground
+		HSSFFont font = pWbook.createFont();
+    		font.setColor(HSSFColor.WHITE.index);
+    		style.setFont(font);
+
+    		// Apply border for the cells
+    		style.setBorderBottom(HSSFCellStyle.BORDER_THIN)
+		style.setBorderTop(HSSFCellStyle.BORDER_THIN)
+		style.setBorderRight(HSSFCellStyle.BORDER_THIN)
+		style.setBorderLeft(HSSFCellStyle.BORDER_THIN)
+    		suiteResultCell.setCellStyle(style);
+	}
+	else
+	{
+		// Highlight the status cell - Background
+		HSSFCellStyle style = pWbook.createCellStyle();
+    		style.setFillForegroundColor(IndexedColors.RED.getIndex())
+		style.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND)
+
+    		// Foreground
+		HSSFFont font = pWbook.createFont();
+    		font.setColor(HSSFColor.WHITE.index);
+    		style.setFont(font);
+    		// Apply border for the cells
+    		style.setBorderBottom(HSSFCellStyle.BORDER_THIN)
+		style.setBorderTop(HSSFCellStyle.BORDER_THIN)
+		style.setBorderRight(HSSFCellStyle.BORDER_THIN)
+		style.setBorderLeft(HSSFCellStyle.BORDER_THIN)    				
+    		suiteResultCell.setCellStyle(style);				
+	}
+
+	// Find total time taken for the test suite
+	String endTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime())
+
+	// Invoke TimeDifference method
+	String strSuiteTime = getDiffTime(suiteStartTime,endTime)
+	
+	// Set the Total Time Taken of TestSuite in the appropriate cell
+	suiteTimeCell = pSheet.getRow(baseRow).getCell(3)
+	suiteTimeCell.setCellValue(strSuiteTime)
+
+	// Update the excel file 
+	FileOutputStream fout1 = new FileOutputStream(new File(filePath))
+	pWbook.write(fout1)
+	fout1.close()
+	fis1.close()
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Delink Action
+def delinkProcess(def sheetName, def tcName, def jdbcRequest, def delinkRequest, def testCaseId, def relObjectId)
+{
+	def projectName = testRunner.testCase.testSuite.project
+	String[] arrTypeCode = ["DRVD","DRVDU"]
+	String goId = relObjectId.toString()
+	String folderLoc = testRunner.testCase.testSuite.project.getPropertyValue("MAIN_FLDR")
+
+	for (int i=0; i<arrTypeCode.length; i++)
+	{
+		String query = "SELECT * FROM CVM_UPD_APP.CUST_REL WHERE REL_OBJ_ID = '" + goId + "' and TYPE_CD = '" + arrTypeCode[i] + "' and expr_tmstp > current_timestamp"
+		testRunner.testCase.testSuite.project.setPropertyValue("JDBC_QUERY",query)
+		log.info(query)
+		
+		def runner = null
+		def tc = projectName.testSuites[sheetName].testCases[tcName]
+		def tstp = tc.getTestStepByName(jdbcRequest)
+		runner = tstp.run(testRunner,context)
+		sleep(1500)
+		testRunner.testCase.testSuite.project.setPropertyValue("JDBCREQ_RESULT", context.testCase.getPropertyValue("RESPONSE_STATUS"))
+		def responseHolder = runner.getResponseContent()
+		runner = null
+		writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(jdbcRequest + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(jdbcRequest + "_Response"),testCaseId + '_' + jdbcRequest + '.txt',folderLoc,testCaseId)
+
+		// Validate if there are any GO IDs are found for 'DRVD' and 'DRVDU' if no data found, then Delink process will not be happened
+		if (responseHolder == null){
+			log.info ("No GO data for Delink process...")
+		}
+		else{
+			def results = new XmlSlurper().parseText( responseHolder )
+			if (results != null){
+				List objIds = results?.ResultSet?.Row?.collect{it.OBJ_ID}
+				List relObjIds = results?.ResultSet?.Row?.collect{it.REL_OBJ_ID}
+				List custModelCode = results?.ResultSet?.Row?.collect{it.CUST_MODEL_CD}
+				List typeCode = results?.ResultSet?.Row?.collect{it.TYPE_CD}
+				for (int x=0; x < objIds.size(); x++){
+					testRunner.testCase.testSuite.project.setPropertyValue("OBJ_ID",objIds[x].toString())
+					testRunner.testCase.testSuite.project.setPropertyValue("REL_OBJ_ID",relObjIds[x].toString())
+					testRunner.testCase.testSuite.project.setPropertyValue("CUST_MODEL_CODE",custModelCode[x].toString())
+					testRunner.testCase.testSuite.project.setPropertyValue("TYPE_CODE",typeCode[x].toString())	
+					def runner1 = null
+					def tc1 = projectName.testSuites[sheetName].testCases[tcName]
+					def tstp1 = tc1.getTestStepByName(delinkRequest)
+					runner1 = tstp1.run(testRunner,context)
+					sleep(1500)
+					testRunner.testCase.testSuite.project.setPropertyValue("DLNKREQ_RESULT", context.testCase.getPropertyValue("RESPONSE_STATUS"))
+					runner1 = null
+					writeRequestResponse(testRunner.testCase.testSuite.project.getPropertyValue(delinkRequest + "_Request"),testRunner.testCase.testSuite.project.getPropertyValue(delinkRequest + "_Response"),testCaseId + '_' + delinkRequest + '_' + x + '.txt',folderLoc,testCaseId)
+				}
+			}
+		}
+	}
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// This method writes the request data and response data based on the given parameters
+public void writeRequestResponse(String strReq, String strRes, String strFile, String fldrName,String tstCaseName)
+{
+	String fldrPath = fldrName + "\\" + tstCaseName + "\\"
+	// Create a folder with current testcase name
+	try{
+		File fldr = new File(fldrPath)
+		if (!fldr.exists())
+		{
+			boolean isSubFolderCreated = fldr.mkdir();
+		}
+	}
+	catch(Exception ex)
+	{
+		ex.printStackTrace();
+	}
+	StringBuffer sbr = new StringBuffer()
+	sbr.append("************************************************************************\n")
+	sbr.append("                                Request                                 \n");
+	sbr.append("************************************************************************\n")
+	sbr.append(strReq + "\n")
+	sbr.append("************************************************************************\n")
+	sbr.append("                                Response                                 \n");
+	sbr.append("************************************************************************\n")
+	sbr.append(strRes + "\n");
+	String filePath = fldrPath + strFile;
+	FileWriter writer = new FileWriter(new File(filePath),true);
+	writer.write(sbr.toString());	writer.close();
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Writes each test steps status(Pass/Fail) in TestSuiteSummary sheet
+public void writeExcel(String tSuite, String tc, LinkedHashMap <String, String> testSteps)
+{
+	String xlFile = "D:\\working\\Groups\\RunManager.xls"
+	try
+	{
+		FileInputStream inputStream = new FileInputStream(new File(xlFile))
+		HSSFWorkbook myBook = new HSSFWorkbook(inputStream)
+		HSSFSheet mySheet = myBook.getSheet("TestSuiteSummary")
+		int maxRows = mySheet.getPhysicalNumberOfRows()
+
+		int col = 0
+
+		// If the TestSuiteSummary sheet does not have data i.e. blank
+		// call the readAndUpdateBlankExcelCells() method to write data
+		// i.e. test steps results (Pass/Fail)
+		if (maxRows == 0)
+		{
+			readAndUpdateBlankExcelCells(tSuite, tc, testSteps)
+		}
+		else
+		{
+			// If the data already there in the sheet, create new row in
+			// the sheet, and write the data over it (in each cells.)
+			// First write the column headers using this FOR loop
+			HSSFRow row = mySheet.createRow(maxRows)
+			int cl = 0
+			for (Map.Entry<String, String> entry : testSteps)
+			{
+				HSSFCell cell = row.createCell(cl).setCellValue(entry.getKey())
+				cl++
+			}
+
+			// This will write the status of the each test step against 
+			// in the respective column header in the sheet
+			HSSFRow dataRow = mySheet.createRow(maxRows+1)
+			int c = 0
+			for (Map.Entry<String, String> entry : testSteps)
+			{
+				HSSFCell cell = dataRow.createCell(c).setCellValue(entry.getValue())
+				c++
+			}
+			inputStream.close()
+
+			FileOutputStream fileOut = new FileOutputStream(xlFile)
+	     	myBook.write(fileOut)
+    			fileOut.flush()
+    			fileOut.close()
+		}
+	}
+	catch(Exception ex)
+	{
+		System.out.println("Inside catch")
+		ex.printStackTrace()
+	}
+}
+// This method creates the rows and columns dynamically based on the test steps
+// and store the status of each test step in the sheet.
+public void readAndUpdateBlankExcelCells(String tSuite, String tc, LinkedHashMap <String, String> steps)
+{
+	String xlPath = "D:\\working\\Groups\\RunManager.xls"
+	try
+	{
+		FileInputStream inputStream = new FileInputStream(new File(xlPath))
+		HSSFWorkbook myBook = new HSSFWorkbook(inputStream)
+		HSSFSheet sheet = myBook.getSheet("TestSuiteSummary")
+
+		for (int rw = 0; rw < 1; rw++)
+		{
+			HSSFRow row = sheet.createRow(rw)
+			int cl = 0
+			for (Map.Entry<String, String> entry : steps)
+			{
+				HSSFCell cell = row.createCell(cl).setCellValue(entry.getKey())
+				cl++
+			}
+
+			HSSFRow dataRow = sheet.createRow(sheet.getLastRowNum()+1)
+			int c = 0
+			for (Map.Entry<String, String> entry : steps)
+			{
+				HSSFCell cell = dataRow.createCell(c).setCellValue(entry.getValue())
+				c++
+			}
+		}		
+		inputStream.close()
+
+		FileOutputStream fileOut = new FileOutputStream(xlPath)
+	     myBook.write(fileOut)
+    		fileOut.flush()
+    		fileOut.close()
+	}
+	catch(Exception ex)
+	{
+		System.out.println("Inside catch")
+		ex.printStackTrace()
+	}
+}
+// Method that returns the difference between two times
+public String getDiffTime(String startTime, String endTime)
+{
+	// Calculate Total Time taken for the execution
+	SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
+	Date d1 = null;
+	Date d2 = null;
+
+	d1 = format.parse(startTime)
+	d2 = format.parse(endTime)
+
+	long diff = d2.getTime() - d1.getTime()
+	long diffInSecs = TimeUnit.MILLISECONDS.toSeconds(diff)
+	return diffInSecs
+}
