@@ -1,0 +1,24 @@
+import groovy.util.*
+import groovy.lang.*
+import com.eviware.soapui.model.testsuite.*
+
+def groovyUtils = new com.eviware.soapui.support.GroovyUtils( context )
+def responseHolder = groovyUtils.getXmlHolder( messageExchange.responseContent )
+def strStatus = (responseHolder != null) ? responseHolder.getNodeValue("//*:linkResponseItem/*:status") : "No Response Found"
+def requestName = messageExchange.modelItem.testStep.testCase.testSuite.project.getPropertyValue("STEP_NAME_4")
+
+String strResponse = (messageExchange.hasResponse()) ? messageExchange.getResponseContentAsXml() :"No Response Found"
+String strRequest = (messageExchange.hasRequest(true)) ? messageExchange.getRequestContentAsXml() : "No Request Found"
+messageExchange.modelItem.testStep.testCase.testSuite.project.setPropertyValue(requestName + "_Request", strRequest)
+messageExchange.modelItem.testStep.testCase.testSuite.project.setPropertyValue(requestName + "_Response", strResponse)
+
+if (responseHolder != null && strStatus.equals("SUCCESS"))
+{
+	context.testCase.setPropertyValue("RESPONSE_STATUS", "PASS")
+	context.testCase.setPropertyValue(requestName + "_RESPONSE_STATUS","PASS")
+}
+else
+{
+	context.testCase.setPropertyValue("RESPONSE_STATUS", "FAIL")
+	context.testCase.setPropertyValue(requestName + "_RESPONSE_STATUS","FAIL")
+}
