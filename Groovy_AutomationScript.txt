@@ -1,0 +1,312 @@
+import jxl.*
+import groovy.util.*
+import groovy.lang.*
+import java.io.File
+import java.util.Date
+import java.lang.String
+import java.util.Calendar
+import java.io.FileWriter
+import java.io.IOException
+import java.io.InputStream
+import jxl.WorkbookSettings
+import java.util.Properties
+import java.util.LinkedHashMap
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.concurrent.TimeUnit
+import com.eviware.soapui.model.testsuite.*
+import com.eviware.soapui.support.GroovyUtils;
+
+import com.eviware.soapui.model.testsuite.TestRunner;
+import com.eviware.soapui.model.testsuite.TestStepResult;
+import com.eviware.soapui.impl.wsdl.teststeps.WsdlTestRequestStep;
+import com.eviware.soapui.impl.wsdl.panels.support.MockTestRunner;
+import com.eviware.soapui.model.testsuite.Assertable.AssertionStatus;
+import com.eviware.soapui.model.testsuite.TestStepResult.TestStepStatus;
+
+import org.apache.poi.ss.usermodel.*
+import org.apache.poi.hssf.util.HSSFColor
+import org.apache.poi.hssf.usermodel.HSSFRow
+import org.apache.poi.hssf.usermodel.HSSFFont
+import org.apache.poi.hssf.usermodel.HSSFCell
+import org.apache.poi.hssf.usermodel.HSSFSheet
+import org.apache.poi.ss.usermodel.IndexedColors
+import org.apache.poi.hssf.usermodel.HSSFWorkbook
+import org.apache.poi.hssf.usermodel.HSSFCellStyle
+import org.apache.poi.ss.usermodel.FillPatternType
+
+// Load Properties
+loadProperties()
+
+// Read datasheet
+readMainSheet()
+
+// Clear Properties
+removeProperties()
+
+// This method will initiate the execution by reading the datasheet i.e.MainSheet
+public void readMainSheet()
+{
+	def filePath = testRunner.testCase.testSuite.project.getPropertyValue("RUNMGR_SHEET").toString()
+	String startTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	log.info ("Execution Started On :" + startTime);
+
+	// Create a output folder
+	String folderPath = createFolder()
+	testRunner.testCase.testSuite.project.setPropertyValue("MAIN_FLDR",folderPath)
+	
+	Workbook book = Workbook.getWorkbook(new File(filePath))
+	Sheet sheet = book.getSheet(0) // "MainSheet"
+	def projName = testRunner.testCase.testSuite.project
+	
+	int totalRows = sheet.getRows()
+	int totalCols = sheet.getColumns()
+
+	if (totalRows <= 0){
+		log.info(totalRows)
+		testRunner.cancel("Testcase Terminated.")
+		return null
+	}
+	
+	// Read "MainSheet" rows which has "Y" flag enabled
+	log.info "Reading MainSheet....."
+	for(int baseRow = 1; baseRow < totalRows; baseRow++){
+		if (sheet.getCell(1,baseRow).getContents().equalsIgnoreCase("Yes"))
+		{
+			def colsList = []
+
+			//  Collect the column values row by row
+			for (int baseCol=0; baseCol < totalCols; baseCol++){
+				colsList.add(sheet.getCell(baseCol,baseRow).getContents())
+			}
+			
+			// Store the column values into the custom properties
+			testRunner.testCase.testSuite.project.setPropertyValue("SUITE_NAME",colsList[0])
+			testRunner.testCase.testSuite.project.setPropertyValue("SUITE_RESULT",colsList[2])
+			testRunner.testCase.testSuite.project.setPropertyValue("TIME_TAKEN",colsList[3])
+			testRunner.testCase.testSuite.project.setPropertyValue("ENVIRONMENT",colsList[4])
+			testRunner.testCase.testSuite.project.setPropertyValue("ENDPOINTURL",colsList[5])
+			testRunner.testCase.testSuite.project.setPropertyValue("BASEROW",baseRow.toString())
+
+			// Call the testsuite which is marked as 'Y' in the 'RunManager' sheet
+			executeByTestSuite(colsList[0],folderPath)
+		}
+	}
+	String endTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	log.info ("Execution Finished On :" + endTime);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Run test suite based on the given name
+public void executeByTestSuite(String suiteName,String folderPath)
+{			
+	String tsStartTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	testRunner.testCase.testSuite.project.setPropertyValue("START_TIME",tsStartTime.toString())
+	
+	LinkedHashMap <String,String> testStepResults = null;
+	LinkedHashMap <String,String> testCaseResults = new LinkedHashMap<String,String>();
+	def testSuite = testRunner.testCase.testSuite.project.testSuites[suiteName];
+
+	for(tc in testSuite.testCaseList)
+	{
+		// Testsuite Execution
+		if (!tc.isDisabled())
+		{
+			// Testcase Execution			
+			String tStepName = "TestStep"
+			testStepResults = new LinkedHashMap<String,String>()
+			
+			int idx = 1
+			for(step in tc.testStepList)
+			{
+				if (!step.isDisabled()){
+					testRunner.runTestStep(step)
+					def requestContent = tc.getTestStepByName(step.getName()).getProperty("Request").getValue()
+					def responseContent = tc.getTestStepByName(step.getName()).getProperty("Response").getValue()
+					//writeRequestResponse(requestContent,responseContent,folderPath,tStepName + idx + ".txt",tc.getName())
+					def assertionList = step.getAssertionList()
+					if (assertionList[1].label == "Script Assertion"){
+						testStepResults.put(step.getName(),assertionList[1].status)
+					}
+					idx++
+				}				
+			}
+			// Update testcase result based on the test step result
+			String tcr = getTestCaseResult(testStepResults)
+			testCaseResults.put(tc.getName(),tcr)
+			testStepResults = null;
+		}
+	}
+	// Get endtime of each testsuite execution
+	String tsEndTime = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss").format(Calendar.getInstance().getTime());
+	testRunner.testCase.testSuite.project.setPropertyValue("END_TIME",tsEndTime.toString())	
+	// Get the testsuite result based on testcases result
+	String tsr = getTestsuiteResult(testCaseResults)
+	// Update current testsuite execution status into excel sheet
+	updateTestSuiteResultInExcel(tsr)	
+}
+
+// This method writes testsuite result into Excel sheet
+def updateTestSuiteResultInExcel(String tstSuiteResult)
+{
+	def fileLoc = testRunner.testCase.testSuite.project.getPropertyValue("RUNMGR_SHEET").toString()
+	String stTime = testRunner.testCase.testSuite.project.getPropertyValue("START_TIME").toString()
+	String enTime = testRunner.testCase.testSuite.project.getPropertyValue("END_TIME").toString()
+	
+	FileInputStream fis = new FileInputStream(new File(fileLoc))
+	HSSFWorkbook wBook = new HSSFWorkbook(fis)
+	HSSFSheet hSheet = wBook.getSheet("MainSheet")
+	org.apache.poi.ss.usermodel.Cell resultCell = null;
+	org.apache.poi.ss.usermodel.Cell timeTakenCell = null;
+	
+	def rowNum = testRunner.testCase.testSuite.project.getPropertyValue("BASEROW")
+	int row = rowNum.toInteger()
+
+	// Set the value to Result column
+	resultCell = hSheet.getRow(row).getCell(2)
+	resultCell.setCellValue(tstSuiteResult)
+
+	// Set the value to TimeTaken column
+	timeTakenCell = hSheet.getRow(row).getCell(3)
+	timeTakenCell.setCellValue(getDiffTime(stTime,enTime))
+	
+	FileOutputStream fout = new FileOutputStream(new File(fileLoc))
+	wBook.write(fout)
+	fout.close()
+	fis.close()
+}
+
+// This method adds each testcase's status based on the test steps
+public String getTestCaseResult(LinkedHashMap <String,String> tstepResults)
+{
+	int rc = 1;
+	String tcResult = "";
+	if (tstepResults != null){
+		for (Map.Entry<String, String> entry : tstepResults){
+			if (!entry.getValue().toString().equals("VALID")){
+				rc = 0;
+			}
+		}
+		if (rc == 1){
+			tcResult = "PASS"
+		}
+		else{
+			tcResult = "FAIL"
+		}
+	}
+	return tcResult;
+}
+
+// This method updates the testsuite status based on the test case results
+public String getTestsuiteResult(LinkedHashMap <String,String> tstCaseResults)
+{
+	int tsuite = 1;
+	String tsResult = "";
+	for (Map.Entry<String, String> entry : tstCaseResults){
+		if (!entry.getValue().toString().equals("PASS")){
+			tsuite = 0;
+		}
+	}
+	if (tsuite == 1){
+		tsResult = "PASS"
+	}
+	else{
+		tsResult = "FAIL"
+	}
+	return tsResult;
+}
+
+// This method writes the request data and response data based on the given parameters
+def writeRequestResponse(String strReq, String strRes, String fldrName,String strFile, String tstCaseName)
+{
+	String fldrPath = fldrName + "\\" + tstCaseName + "\\"
+	// Create a folder with current testcase name
+	try{
+		File fldr = new File(fldrPath)
+		if (!fldr.exists())
+		{
+			boolean isSubFolderCreated = fldr.mkdir();
+		}
+	}
+	catch(Exception ex)
+	{
+		ex.printStackTrace();
+	}
+	StringBuffer sbr = new StringBuffer()
+	sbr.append("************************************************************************\n")
+	sbr.append("                                Request                                 \n");
+	sbr.append("************************************************************************\n")
+	sbr.append(strReq + "\n")
+	sbr.append("************************************************************************\n")
+	sbr.append("                                Response                                 \n");
+	sbr.append("************************************************************************\n")
+	sbr.append(strRes + "\n");
+	String filePath = fldrPath + strFile;
+	FileWriter writer = new FileWriter(new File(filePath),true);
+	writer.write(sbr.toString());	writer.close();
+}
+
+// Method that returns the folder location that was newly created
+public String createFolder()
+{
+	String outputFolderLoc = "";
+	try{
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+		Date date = new Date();
+		String currentDateTime = dateFormat.format(date);
+		outputFolderLoc = testRunner.testCase.testSuite.project.getPropertyValue("OUTPUT_FLDR").toString() + currentDateTime;
+		File file = new File(outputFolderLoc);
+		
+		if (!file.exists()){
+			boolean isDirCreated = file.mkdir();
+		}
+	}
+	catch(Exception ex){
+		ex.printStackTrace();
+	}
+	return outputFolderLoc;
+}
+
+// Method will remove the custom properties
+public void removeProperties()
+{	
+	def testSuiteProperties = testRunner.testCase.testSuite.project.getPropertyList();
+	for (tsProperty in testSuiteProperties){
+		testRunner.testCase.testSuite.project.removeProperty(tsProperty.getName())	
+	}
+	log.info("Properties are deleted successfully.")
+}
+
+// This method loads all the configuration properties into custom properties
+public void loadProperties()
+{
+	Properties prop = new Properties()
+	InputStream inp = null
+	try{
+		inp = new FileInputStream("Z:\\myfolder\\Interaction\\config.properties")
+		prop.load(inp)
+
+		testRunner.testCase.testSuite.project.setPropertyValue("TEST_DATA",prop.getProperty("testdata_sheet"))
+		testRunner.testCase.testSuite.project.setPropertyValue("RUNMGR_SHEET",prop.getProperty("runmanager_sheet_loc"))
+		testRunner.testCase.testSuite.project.setPropertyValue("OUTPUT_FLDR",prop.getProperty("output_fldr"))
+		testRunner.testCase.testSuite.project.setPropertyValue("USRTOKEN",prop.getProperty("usertoken"))
+	}
+	catch(Exception ex){
+		log.info(ex.getMessage())
+	}
+}
+
+// Method that returns the difference between two times
+public String getDiffTime(String startTime, String endTime)
+{
+	// Calculate Total Time taken for the execution
+	SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss")
+	Date d1 = null;
+	Date d2 = null;
+	d1 = format.parse(startTime)
+	d2 = format.parse(endTime)
+
+	long diff = d2.getTime() - d1.getTime()
+	long diffInSecs = TimeUnit.MILLISECONDS.toSeconds(diff)
+	return (diffInSecs <= 0) ? 1 :diffInSecs
+}
