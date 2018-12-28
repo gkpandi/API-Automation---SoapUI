@@ -1,0 +1,61 @@
+import java.util.*;
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.activation.*;
+
+sendMailTo();
+
+public void sendMailTo()
+{
+	String from = "dummymail@dummy.com"
+	String to = "dummymail@dummy.com"
+	String sub = "Reg: Interaction - Regression Suite Report"
+	sendEmail(from,to,sub)
+}
+// Method that sends a mail to the given email addresses with the attachment of regression suite report 
+public void sendEmail(String strFrom,String strTo,String strSubject)
+{
+	String host = "smtp.mail.xyz.com"
+	String[] cc = new String[1]
+	cc[0] = "dummymail@dummy.com"
+	
+	Properties properties = System.getProperties()
+	properties.setProperty("mail.smtp.host",host)
+	Session session = Session.getDefaultInstance(properties)
+
+	try{
+		MimeMessage message = new MimeMessage(session)
+		message.setFrom(new InternetAddress(strFrom));
+		message.addRecipient(Message.RecipientType.TO,new InternetAddress(strTo));
+		InternetAddress[] ccAddress = new InternetAddress[cc.length]
+		
+		for (int i=0; i < cc.length; i++){
+			ccAddress[i] = new InternetAddress(cc[i])
+		}
+		for (int i=0; i < ccAddress.length; i++){
+			message.addRecipient(Message.RecipientType.CC,ccAddress[i])
+		}
+
+		message.setSubject(strSubject);
+		BodyPart messageBodyPart = new MimeBodyPart();
+		messageBodyPart.setText("Hi, \n\nPlease find the attached Regresion Suite report of Interaction services executed in [" + testRunner.testCase.testSuite.project.getPropertyValue("ENVIRONMENT").toString() + "] environment.\n\n\nThanks, \nKarunagara Pandi G");
+
+		Multipart multipart = new MimeMultipart();
+		multipart.addBodyPart(messageBodyPart);
+
+		messageBodyPart = new MimeBodyPart();
+
+		String fileName = testRunner.testCase.testSuite.project.getPropertyValue("REPORT_FILE").toString()
+		DataSource source = new FileDataSource(fileName);
+		messageBodyPart.setDataHandler(new DataHandler(source));
+		messageBodyPart.setFileName("RegressionSuiteReport.xls");
+		multipart.addBodyPart(messageBodyPart);
+
+		message.setContent(multipart);
+		Transport.send(message);
+		log.info("Mail sent successfully...")
+	}
+	catch(MessagingException ex){
+		log.info(ex.getMessage());
+	}
+}

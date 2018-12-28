@@ -1,0 +1,214 @@
+import java.io.File;
+import java.util.Map;
+import java.util.List;
+import java.util.Iterator;
+import java.io.FileWriter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap
+import java.io.FileInputStream;
+import java.util.LinkedHashMap;
+
+import jxl.Sheet;
+import jxl.Workbook;
+import jxl.WorkbookSettings;
+
+buildTestSuiteSummaryReport()
+
+public void buildTestSuiteSummaryReport()
+{
+	Workbook book = null;
+	Sheet sheet = null;
+	String filePath = "Z:\\myfolder\\Interaction\\DriverManager.xls";
+	String reportsLoc = "Z:\\myfolder\\Interaction\\RegressionSuiteReport.html";
+	StringBuffer htmlTable = null;
+	int stepsCount = 0;
+	LinkedHashMap<String, String> testSuites = new LinkedHashMap<String, String>();
+	ArrayList<String> arrayTestSuites = new ArrayList<String>();
+	
+	try
+	{
+		FileInputStream fis = new FileInputStream(new File(filePath));
+		WorkbookSettings ws = new WorkbookSettings();
+		ws.setSuppressWarnings(true);
+		book = Workbook.getWorkbook(fis,ws);
+		sheet = book.getSheet(0);
+		htmlTable = new StringBuffer();
+		
+		int totalRows = sheet.getRows();
+		int totalCols = sheet.getColumns();
+		int totalSuites = 0;
+		int totalPass = 0;
+		int totalFail = 0;
+		int totalTimeTaken = 0; 
+		int sno = 0;
+
+		htmlTable.append("<html><head><title>::Regression Automation::Reports</title><script type='text/javascript'>function showTestSuiteSummary(id)"
+				+ "{var e = document.getElementById(id); if (e.style.display == 'none'){ e.style.display='block';}"
+				+ "else{e.style.display='none';}}"
+				+ "function showTestCaseDetails(testStepsRowId,toggleText){"
+				+ "var tid = document.getElementById(testStepsRowId);"
+				+ "if (tid.style.display == 'none'){tid.style.display='block'; document.getElementById(toggleText).text='Hide Details';}"
+				+ "else{tid.style.display='none';document.getElementById(toggleText).text='Show Details';}}"
+				+ "</script></head><body>");
+		htmlTable.append("<h2 style='font-family:verdana;font-size:18px;'>Report Summary</h2>"
+				+ "<table border='1' id='testSuiteTable' cellpadding='4' cellspacing='0'>");
+		htmlTable.append("<thead><tr style='background-color:darkblue;color:white;font-family:verdana;font-size:14px;'>");
+		htmlTable.append("<th>Sno</th><th># Test Suites</th>");
+		htmlTable.append("<th># Passed</th><th># Failed</th>");
+		htmlTable.append("<th>Total Time Taken</th></tr></thead>"
+				+ "<tbody style='background-color:white;color:black;font-family:verdana;font-size:12px;'>");
+
+			// This loop will give the total testsuites, totalpass/fail count and totalTimeTaken
+			for (int baseRow = 1; baseRow < totalRows; baseRow++){
+				// Check if the flag is 'Y'
+				if (sheet.getCell(1,baseRow).getContents().equalsIgnoreCase("Yes")){
+					totalSuites++;
+					
+					arrayTestSuites.add(sheet.getCell(0,baseRow).getContents().toString());
+					
+					// Read the row data where the 'Y' is enabled
+					for (int col = 0; col < totalCols; col++){
+						String strStatus = sheet.getCell(col,baseRow).getContents();
+						if (strStatus.equalsIgnoreCase("pass")){
+							totalPass++;
+						}
+						else if (strStatus.equalsIgnoreCase("fail")){
+							totalFail++;
+						}
+					}
+					// Store TestSuite Name and Execution Time
+					testSuites.put(sheet.getCell(0,baseRow).getContents(), sheet.getCell(3,baseRow).getContents());					
+					totalTimeTaken += Integer.parseInt((sheet.getCell(3,baseRow).getContents().equalsIgnoreCase("") ? "0" 
+							:sheet.getCell(3,baseRow).getContents()));
+				}
+			}
+			// Add a table row in the HTML table along with appropriate data 
+			htmlTable.append("<tr>");
+			htmlTable.append("<td align='center'>1</td>");
+			htmlTable.append("<td align='center'>"
+					+ "<a href='#' title='click here' style='text-decoration:none;color:blue' onclick=showTestSuiteSummary('suiteDiv')>"
+					+ totalSuites + "</a></td>");
+			htmlTable.append("<td align='center'>" + totalPass + "</td>");
+			htmlTable.append("<td align='center'>" + totalFail + "</td>");
+			htmlTable.append("<td align='center'>" + totalTimeTaken + " (seconds)</td>");
+			htmlTable.append("</tr></tbody></table><br>");
+			htmlTable.append("<div id='suiteDiv' style='display:none'>"
+					+ "<h3 style='font-family:verdana;font-size:18px'>Testsuite Summary Report</h3>"
+					+ "<table border='1' cellpadding='4' cellspacing='0'>");			
+			htmlTable.append("<tr style='background-color:darkblue;color:white;font-family:verdana;font-size:14px;'>"
+					+ "<th align='center'>Sno</th><th align='center'>Test Suite Name</th>");
+			htmlTable.append("<th align='center'># TestCases</th><th align='center'># Passed</th>");
+			htmlTable.append("<th align='center'># Failed</th><th align='center'>Show/Hide</th></tr>");
+
+			//log.info("Report File :" + testRunner.testCase.testSuite.project.getPropertyValue("REPORT_FILE").toString())
+			String strReportFileLoc = (testRunner.testCase.testSuite.project.getPropertyValue("REPORT_FILE").toString().trim().length() > 0) ? testRunner.testCase.testSuite.project.getPropertyValue("REPORT_FILE").toString() : "No File Found"
+		
+			for(int i=0; i < arrayTestSuites.size(); i++)
+			{
+				int tcTotalPass = 0;
+				int tcTotalFail = 0;
+				FileInputStream fis1 = new FileInputStream(new File(strReportFileLoc));
+				WorkbookSettings ws1 = new WorkbookSettings();
+				ws1.setSuppressWarnings(true);
+				Workbook wbook = Workbook.getWorkbook(fis1,ws1);
+				Sheet wsheet = wbook.getSheet(arrayTestSuites.get(i))
+
+				int rows = wsheet.getRows();
+				int cols = wsheet.getColumns();
+				totalTestCases = rows - 1
+
+				LinkedHashMap<String,String> testCasesList = new LinkedHashMap<String,String>();
+				
+				// This loop reads the test case sheet row by row
+				for (int row = 1; row <= totalTestCases; row++){
+					String strValue = wsheet.getCell(2,row).getContents();
+					if (strValue.equalsIgnoreCase("pass")){
+						tcTotalPass++;
+					}
+					else if (strValue.equalsIgnoreCase("fail")){
+						tcTotalFail++;
+					}
+					testCasesList.put(wsheet.getCell(1,row).getContents(),wsheet.getCell(2,row).getContents());
+				}
+				htmlTable.append("<tr style='font-family:verdana;font-size:12px;'>");
+				htmlTable.append("<td align='center'>"+ (i+1) + "</td>");
+				htmlTable.append("<td align='center'>" + arrayTestSuites.get(i) + "</td>");
+				htmlTable.append("<td align='center'>" + totalTestCases + "</td>");				
+				htmlTable.append("<td align='center'>" + tcTotalPass + "</td>");
+				htmlTable.append("<td align='center'>" + tcTotalFail + "</td>");
+				htmlTable.append("<td align='center'><a href='#' id='" + (i+1) + "' title='click here' style='text-decoration:none;color:blue' onclick=showTestCaseDetails('" + arrayTestSuites.get(i) + "',this.id);>Show Details</td></tr>");
+
+				htmlTable.append("<tr id='" + arrayTestSuites.get(i) + "' style='display:none'>");
+				htmlTable.append("<td align='center' colspan='6'>");
+				htmlTable.append("<div>")
+				htmlTable.append("<table border='1' cellpadding='4' cellspacing='0'>");
+				htmlTable.append("<tr style='background-color:grey;color:white;font-family:verdana;font-size:12px;'>")
+				htmlTable.append("<th align='center'>TestCase ID</th>")
+				htmlTable.append("<th align='center'>TestCase Description</th>")
+				htmlTable.append("<th align='center'>TestCase Status</th></tr>")
+				
+				int idx=1;
+				for(Map.Entry<String,String> testStepMap : testCasesList.entrySet())
+				{
+					htmlTable.append("<tr style='font-family:verdana;font-size:11px;'>");					
+					htmlTable.append("<td align='center'>TC_" + idx + "</td>");
+					htmlTable.append("<td align='left'>" + testStepMap.getKey() + "</td>");
+					if (testStepMap.getValue().toString().trim().equalsIgnoreCase("pass")){
+						htmlTable.append("<td align='center'><p style='font-family:verdana;font-size:10px;color:green'><b>Pass</b></p></td>")
+					}else{//<img src='Z://myfolder//Interaction//pass.png' alt='Pass' title='Pass' style='width:15px;height:15px;'>
+						htmlTable.append("<td align='center'><p style='font-family:verdana;font-size:10px;color:red'><b>Fail</b></p></td>")
+					}//<img src='Z://myfolder//Interaction//fail.png' alt='Fail' title='Fail' style='width:15px;height:15px;'>
+					idx++
+					htmlTable.append("</tr>");
+				}
+				htmlTable.append("</table></div></td></tr>");// TestSteps Table Ends
+			} // End arrayTestSuites loop
+			htmlTable.append("</table></div></body></html>");
+			fis.close();
+			book.close();
+			
+			FileWriter writer = new FileWriter(new File(reportsLoc));
+			writer.write(htmlTable.toString());
+			writer.flush();
+			writer.close();
+			testSuites.clear();
+			htmlTable = null;
+			//testRunner.testCase.testSuite.project.setPropertyValue("REPORT_FILE",reportsLoc)			
+		}
+		catch(Exception ex){
+			log.info(ex.getMessage())
+		}
+}
+
+public String getTestStepsByCaseId(String tstId)
+{
+	String steps = "";	
+	try{
+		WorkbookSettings ws = new WorkbookSettings();
+		ws.setSuppressWarnings(true);
+		FileInputStream fis = new FileInputStream(new File(filePath));
+		Workbook myBook = Workbook.getWorkbook(fis,ws);
+		Sheet mySheet = myBook.getSheet("TestSuiteSummary");
+		
+		int rows = mySheet.getRows();
+		int cols = mySheet.getColumns();
+
+		for (int r = 0; r < rows; r++){
+			String tstCaseId = mySheet.getCell(1, r).getContents();
+			if (tstCaseId.equalsIgnoreCase(tstId)){
+				for (int c = 0; c < cols; c++){
+					if (mySheet.getCell(c, r).getContents().trim().length() > 0){
+						steps += mySheet.getCell(c, r).getContents() + "|";
+					}
+				}
+				break;
+			}
+		}
+		fis.close();
+		myBook.close();
+	}
+	catch(Exception ex){
+		ex.printStackTrace();
+	}
+	return steps;
+}
