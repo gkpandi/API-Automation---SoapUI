@@ -1,0 +1,101 @@
+Cucumber -
+
+jar files-
+1.cobertura-2.1.1
+2.cucumber-core-1.2.2
+3.cucumber-html-0.2.7
+4.cucumber-java-1.2.2
+5.cucumber-junit-1.2.2
+6.cucumber-jvm-deps-1.0.3
+7.cucumber-reporting-0.1.0
+8.gherkin-2.12.2
+9.hamcrest-core-1.3
+10.junit-4.11
+
+1.create a java project
+2.create a folder
+3.create a feature file and added the below script-
+
+Feature: Functionality on login page of Application 
+Scenario : Verification for login with numbers of credential
+ 
+Given Open the chrome and launch the application
+     
+When enter the username and password
+      
+Then login to the application
+
+4.create a package and create a class and add the below script-
+
+package StepDefinition;
+
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+
+import cucumber.api.java.en.Given;
+import cucumber.api.java.en.Then;
+import cucumber.api.java.en.When;
+
+
+public class Steps {
+	WebDriver d1;
+	
+	@Given("^Open the chrome and launch the application$")
+	
+	public void Open_the_chrome_and_launch_the_application () throws Throwable
+	
+	{
+		System.setProperty("webdriver.chrome.driver","\\\\172.26.100.9\\Training-Share$\\Faculty\\Karthika\\Selenium\\Selenium - Training sw\\chromedriver.exe");
+	 d1=new ChromeDriver();
+		d1.get("https://my.syntel.in");
+		System.out.println("This Step open the chrome and launch the application");
+	}
+
+	
+	@When("^enter the username  and password $")
+	
+	public void enter_the_username_and_password(String username,String password) throws Throwable
+	
+	{
+		d1.findElement(By.id("_com_liferay_login_web_portlet_LoginPortlet_kpoUserName")).sendKeys(username);
+		d1.findElement(By.name("_com_liferay_login_web_portlet_LoginPortlet_password")).sendKeys(password);
+		
+		System.out.println("this step enter the username and password on the login page");
+	}
+	
+	
+ @Then("^login to the application$")
+	 
+	 public void login_to_the_application() throws Throwable
+	 
+	 {
+	    d1.findElement(By.id("_com_liferay_login_web_portlet_LoginPortlet_btn1")).click();
+		 System.out.println("This step login to the application");
+	 }
+
+	
+}
+
+
+5.create a package and create a class and add the below script-
+
+package TestRunner;
+
+import org.junit.runner.RunWith;
+import cucumber.api.CucumberOptions;
+import cucumber.api.junit.Cucumber;
+
+
+@RunWith(Cucumber.class)
+@CucumberOptions(features="Features/MyTest.feature",glue="StepDefinition")
+
+
+public class Runner {
+	
+	
+
+}
+
+
