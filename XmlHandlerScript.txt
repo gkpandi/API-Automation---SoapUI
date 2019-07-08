@@ -1,0 +1,93 @@
+import java.io.*
+import groovy.lang.*;
+import groovy.util.XmlSlurper;
+groovy.util.slurpersupport.Attributes
+
+xmlHandler()
+
+public void xmlHandler()
+{
+	def xml = new File("D:\\working\\docs\\Result.xml").text
+	def xmlString = new XmlSlurper().parseText(xml)	
+	log.info(xmlString.result.doc.str.@name.text())	
+}
+
+
+import java.io.*
+import groovy.lang.*;
+import groovy.util.XmlSlurper;
+
+getXmlData()
+
+public void xmlHandler()
+{
+	def xml = new File("D:\\working\\docs\\Result.xml").text
+	def xmlString = new XmlSlurper().parseText(xml)	
+	log.info(xmlString.result.doc.str.@name.text())
+	
+}
+
+public void getXmlData()
+{
+	def xml = new File("D:\\working\\docs\\Result.xml").text
+	def xmlString = new XmlSlurper().parseText(xml)
+
+	def docNode = xmlString.result.doc[0]
+	if(docNode.str.@name=="ean")
+	{
+		log.info(docNode.str.@name["ean"].toString())
+	}
+	
+	/*if(docNode.str.@name.toString().equals("ean") )
+	{
+		log.info("Inside IF statement")	
+		String tagAttributes = xmlString.result.doc.arr.str
+		log.info(tagAttributes.toString())		
+	}*/
+}
+
+*************************
+	def xmlString = new XmlParser().parse("D:\\working\\docs\\Result.xml")
+	//log.info("${xmlString.result.doc[0].str[2].text()}") // print specific tag value based on index
+
+	xmlString.result.doc[0].each{ str ->
+		//log.info( "str.name = " + str.@'name') // print all attributes
+		if (str.@'name'.toString().equals('exp_tmstp'))
+		{
+			log.info(str.text())
+		}
+	}
+***************************
+
+Final XML Handle Script in Groovy
+*********************************
+
+import java.io.*
+import groovy.lang.*;
+import groovy.util.XmlSlurper;
+import groovy.util.slurpersupport.Attributes
+
+getXmlData()
+
+public void getXmlData()
+{
+	def xmlString = new XmlParser().parse("D:\\working\\docs\\Result.xml")
+	int c = xmlString.result.doc.size()
+
+	if ( c != 0)
+	{
+		for(int i=0; i<c; i++)
+		{
+			xmlString.result.doc[i].each
+			{ str ->
+				if (str.@'name'.toString().equals('exp_tmstp'))
+				{
+					if (str.text().toString().equals('9999-12-31T23:59:59.999Z'))
+					{
+						log.info(xmlString.result.doc[i].str[1].text())
+					}				
+				}
+			}
+		}
+	}
+}
